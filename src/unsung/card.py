@@ -35,6 +35,36 @@ _ROWS = [
 ]
 
 
+# Footer text is font-size 11; this is a conservative average glyph width (px)
+# for the default sans-serif stack, used to keep the "most helped" line inside
+# the card instead of overflowing past the border for long owner/repo names.
+_FOOTER_CHAR_W = 6.2
+_FOOTER_PREFIX = "\u2764 most helped: "
+
+
+def _fit_names(names: list[str], inner_width: int) -> str:
+    """Join repo names to fit within ``inner_width`` px, ellipsizing if needed.
+
+    Drops whole trailing names first (adding an ellipsis), and only hard-cuts a
+    single over-long name as a last resort. Returns the raw (unescaped) string.
+    """
+    budget = int(inner_width / _FOOTER_CHAR_W) - len(_FOOTER_PREFIX)
+    if budget < 1:
+        budget = 1
+    full = ", ".join(names)
+    if len(full) <= budget:
+        return full
+    kept = list(names)
+    while kept:
+        candidate = ", ".join(kept) + ", \u2026"
+        if len(candidate) <= budget:
+            return candidate
+        kept.pop()
+    # A single name alone is too long: hard-cut with an ellipsis.
+    first = names[0]
+    return first[: max(1, budget - 1)] + "\u2026"
+
+
 def _esc(s: str) -> str:
     return (
         s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
@@ -80,7 +110,7 @@ def render(stats: Stats, theme: str = "dark", title: str | None = None,
     # Footer: top projects helped.
     footer = ""
     if stats.top_helped:
-        names = ", ".join(_esc(n) for n, _ in stats.top_helped)
+        names = _esc(_fit_names([n for n, _ in stats.top_helped], width - 2 * pad))
         op = "0" if animate else "1"
         footer = (
             f'<g transform="translate({pad}, {row_start + len(_ROWS) * row_gap + 4})" '

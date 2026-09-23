@@ -106,3 +106,25 @@ def test_render_no_animate_has_no_animate_tag():
               issues_for_others=1, projects_helped=1)
     assert "<animate" not in render(s, animate=False)
     assert "<animate" in render(s, animate=True)
+
+
+def test_footer_names_fit_within_card():
+    """Long owner/repo names must be ellipsized so the footer stays in the card."""
+    from unsung.card import _fit_names, _FOOTER_CHAR_W, _FOOTER_PREFIX
+
+    inner = 470 - 2 * 25
+    budget = int(inner / _FOOTER_CHAR_W) - len(_FOOTER_PREFIX)
+    long_names = [
+        "kubernetes-sigs/aws-load-balancer-controller",
+        "prometheus-operator/prometheus-operator",
+        "opentelemetry/opentelemetry-collector-contrib",
+    ]
+    out = _fit_names(long_names, inner)
+    assert len(out) <= budget
+    assert out.endswith("\u2026")
+    # short names are left untouched
+    short = ["a/b", "c/d", "e/f"]
+    assert _fit_names(short, inner) == "a/b, c/d, e/f"
+    # a single over-long name is hard-cut with an ellipsis
+    solo = _fit_names(["x" * 200], inner)
+    assert len(solo) <= budget and solo.endswith("\u2026")
