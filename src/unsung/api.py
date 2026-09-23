@@ -28,15 +28,15 @@ query($login:String!, $from:DateTime!, $to:DateTime!){
       totalPullRequestContributions
       totalIssueContributions
       pullRequestReviewContributionsByRepository(maxRepositories:100){
-        repository{ nameWithOwner isPrivate owner{ login } }
+        repository{ nameWithOwner isPrivate stargazerCount owner{ login } }
         contributions{ totalCount }
       }
       pullRequestContributionsByRepository(maxRepositories:100){
-        repository{ nameWithOwner isPrivate owner{ login } }
+        repository{ nameWithOwner isPrivate stargazerCount owner{ login } }
         contributions{ totalCount }
       }
       issueContributionsByRepository(maxRepositories:100){
-        repository{ nameWithOwner isPrivate owner{ login } }
+        repository{ nameWithOwner isPrivate stargazerCount owner{ login } }
         contributions{ totalCount }
       }
     }
@@ -59,7 +59,7 @@ class Stats:
     prs_to_others: int = 0
     issues_for_others: int = 0
     projects_helped: int = 0
-    top_helped: list[tuple[str, int]] = field(default_factory=list)
+    top_helped: list[tuple[str, int, int]] = field(default_factory=list)
     since_label: str = "the last year"
 
     @property
@@ -140,6 +140,7 @@ def _accumulate(cc: dict, login: str, agg: dict) -> None:
             name = repo["nameWithOwner"]
             bucket[name] = bucket.get(name, 0) + n
             agg["per_repo"][name] = agg["per_repo"].get(name, 0) + n
+            agg["stars"][name] = repo.get("stargazerCount") or 0
 
     add(cc.get("pullRequestReviewContributionsByRepository"), agg["reviews"])
     add(cc.get("pullRequestContributionsByRepository"), agg["prs"])
@@ -161,7 +162,7 @@ def collect(login: str, token: str, since: str = "year", now: datetime | None = 
     real_login = first["login"]
     name = first.get("name")
 
-    agg = {"reviews": {}, "prs": {}, "issues": {}, "per_repo": {}}
+    agg = {"reviews": {}, "prs": {}, "issues": {}, "per_repo": {}, "stars": {}}
     _accumulate(first["contributionsCollection"], real_login, agg)
 
     if since == "all":
@@ -175,7 +176,16 @@ def collect(login: str, token: str, since: str = "year", now: datetime | None = 
     else:
         since_label = "the last year"
 
-    top = sorted(agg["per_repo"].items(), key=lambda kv: (-kv[1], kv[0]))[:3]
+    # Rank the "most helped" footer by repo PROMINENCE (stargazers) first, then
+    # contribution count, then name. Surfacing the most recognizable repo a user
+    # touched ("you helped facebook/react") is a flex even at a single PR, which
+    # makes the card shareable for the median contributor -- not just heavy ones.
+    stars = agg["stars"]
+    top = sorted(
+        agg["per_repo"].items(),
+        key=lambda kv: (-stars.get(kv[0], 0), -kv[1], kv[0]),
+    )[:3]
+    top_helped = [(name_, count, stars.get(name_, 0)) for name_, count in top]
     return Stats(
         login=real_login,
         name=name,
@@ -183,6 +193,6 @@ def collect(login: str, token: str, since: str = "year", now: datetime | None = 
         prs_to_others=sum(agg["prs"].values()),
         issues_for_others=sum(agg["issues"].values()),
         projects_helped=len(agg["per_repo"]),
-        top_helped=top,
+        top_helped=top_helped,
         since_label=since_label,
     )

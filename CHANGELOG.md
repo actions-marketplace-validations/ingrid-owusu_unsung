@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 — 2026-09-23
+- The "most helped" footer now ranks by repository **prominence** (stargazers)
+  instead of raw contribution count, and shows a compact star badge, e.g.
+  `♥ most helped: facebook/react ★220k`. Surfacing the most recognizable repo you
+  touched is a flex even at a single PR, so the card is worth sharing for the
+  median contributor — not only for heavy ones. Ties break on contribution count.
+- Repos with no stars still render (without a badge); private repos stay excluded.
+
 ## 0.1.2 — 2026-09-23
 - Fix: the card title now truncates long display names (e.g.
   `Alexander Christopher Montgomery-Wellington`) with an ellipsis so the header

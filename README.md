@@ -98,7 +98,8 @@ $ GITHUB_TOKEN=xxxxx python -m unsung your-login --theme dracula --output card.s
 - **PRs to others' projects** — pull requests you opened on repos you don't own.
 - **Issues opened for others** — issues you filed on repos you don't own.
 - **Projects helped** — distinct non-owned public repositories you contributed to.
-- **♥ most helped** — the projects where you did the most of the above.
+- **♥ most helped** — the most *prominent* projects you contributed to (ranked by
+  their star count), shown with a compact star badge like `facebook/react ★220k`.
 
 Private repositories are always excluded, so nothing leaks. Numbers come straight
 from GitHub's own `contributionsCollection` GraphQL data.

@@ -10,9 +10,10 @@ from unsung.card import THEMES, render  # noqa: E402
 
 
 def _fake_payload(login="octo", created="2020-01-01T00:00:00Z"):
-    def repo(nwo, priv=False):
+    def repo(nwo, priv=False, stars=0):
         owner = nwo.split("/")[0]
-        return {"nameWithOwner": nwo, "isPrivate": priv, "owner": {"login": owner}}
+        return {"nameWithOwner": nwo, "isPrivate": priv, "stargazerCount": stars,
+                "owner": {"login": owner}}
 
     return {
         "login": login,
@@ -52,9 +53,34 @@ def test_collect_excludes_own_and_private(monkeypatch):
 def test_top_helped_sorted(monkeypatch):
     monkeypatch.setattr(api, "_post", lambda token, variables: _fake_payload())
     s = collect("octo", token="x")
-    # acme/widget: 4 review + 2 pr = 6 ; beta/tool: 1 pr + 3 issue = 4
-    assert s.top_helped[0] == ("acme/widget", 6)
-    assert s.top_helped[1] == ("beta/tool", 4)
+    # No stars set in the base payload -> ranking falls back to contribution
+    # count. acme/widget: 4 review + 2 pr = 6 ; beta/tool: 1 pr + 3 issue = 4.
+    assert s.top_helped[0] == ("acme/widget", 6, 0)
+    assert s.top_helped[1] == ("beta/tool", 4, 0)
+
+
+def test_top_helped_ranks_by_prominence(monkeypatch):
+    def payload(token, variables):
+        p = _fake_payload()
+        cc = p["contributionsCollection"]
+        # beta/tool is a famous repo (many stars) but touched only once;
+        # acme/widget has more contributions but is obscure. Prominence wins.
+        cc["pullRequestReviewContributionsByRepository"] = [
+            {"repository": {"nameWithOwner": "acme/widget", "isPrivate": False,
+                            "stargazerCount": 12, "owner": {"login": "acme"}},
+             "contributions": {"totalCount": 6}},
+        ]
+        cc["pullRequestContributionsByRepository"] = [
+            {"repository": {"nameWithOwner": "facebook/react", "isPrivate": False,
+                            "stargazerCount": 220000, "owner": {"login": "facebook"}},
+             "contributions": {"totalCount": 1}},
+        ]
+        cc["issueContributionsByRepository"] = []
+        return p
+    monkeypatch.setattr(api, "_post", payload)
+    s = collect("octo", token="x")
+    assert s.top_helped[0] == ("facebook/react", 1, 220000)
+    assert s.top_helped[1] == ("acme/widget", 6, 12)
 
 
 def test_collect_requires_token():
@@ -82,7 +108,7 @@ def test_collect_case_insensitive_owner(monkeypatch):
 def test_render_all_themes_valid_svg():
     s = Stats(login="octo", name="Octo", reviews_given=201, prs_to_others=126,
               issues_for_others=14, projects_helped=18,
-              top_helped=[("a/b", 9), ("c/d", 5)])
+              top_helped=[("a/b", 9, 0), ("c/d", 5, 0)])
     for theme in THEMES:
         svg = render(s, theme=theme)
         assert svg.startswith("<svg")
@@ -99,6 +125,25 @@ def test_render_escapes_and_number_format():
     assert "12,345" in svg
     assert "&amp;" in svg and "&lt;" in svg
     assert "<x>" not in svg  # raw angle brackets escaped
+
+
+def test_fmt_stars_compact():
+    from unsung.card import _fmt_stars
+    assert _fmt_stars(234) == "234"
+    assert _fmt_stars(1500) == "1.5k"
+    assert _fmt_stars(90000) == "90k"
+    assert _fmt_stars(0) == "0"
+
+
+def test_footer_shows_star_flex():
+    """The footer surfaces a compact star badge for prominent repos."""
+    s = Stats(login="o", name="O", reviews_given=1, prs_to_others=1,
+              issues_for_others=0, projects_helped=2,
+              top_helped=[("facebook/react", 1, 220000), ("obscure/x", 9, 0)])
+    svg = render(s, animate=False)
+    assert "facebook/react \u2605220k" in svg
+    # a repo with no stars shows no badge
+    assert "obscure/x \u2605" not in svg
 
 
 def test_render_no_animate_has_no_animate_tag():

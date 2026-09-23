@@ -67,6 +67,29 @@ def _fit_generic(text: str, inner_width: int) -> str:
     return text[: max(1, budget - 1)].rstrip() + "\u2026"
 
 
+def _fmt_stars(n: int) -> str:
+    """Compact star count: 90000 -> '90k', 1500 -> '1.5k', 234 -> '234'."""
+    if n >= 1000:
+        v = n / 1000.0
+        return (f"{v:.1f}".rstrip("0").rstrip(".")) + "k"
+    return str(n)
+
+
+def _footer_entries(top: list) -> list[str]:
+    """Format ``top_helped`` rows as 'owner/repo \u2605Nk', dropping the star
+    badge for repos with no stars. Accepts (name, count) or (name, count, stars).
+    """
+    out = []
+    for row in top:
+        name = row[0]
+        stars = row[2] if len(row) > 2 else 0
+        if stars and stars > 0:
+            out.append(f"{name} \u2605{_fmt_stars(stars)}")
+        else:
+            out.append(name)
+    return out
+
+
 def _fit_names(names: list[str], inner_width: int) -> str:
     """Join repo names to fit within ``inner_width`` px, ellipsizing if needed.
 
@@ -136,7 +159,7 @@ def render(stats: Stats, theme: str = "dark", title: str | None = None,
     # Footer: top projects helped.
     footer = ""
     if stats.top_helped:
-        names = _esc(_fit_names([n for n, _ in stats.top_helped], width - 2 * pad))
+        names = _esc(_fit_names(_footer_entries(stats.top_helped), width - 2 * pad))
         op = "0" if animate else "1"
         footer = (
             f'<g transform="translate({pad}, {row_start + len(_ROWS) * row_gap + 4})" '
