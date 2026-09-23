@@ -41,6 +41,31 @@ _ROWS = [
 _FOOTER_CHAR_W = 6.2
 _FOOTER_PREFIX = "\u2764 most helped: "
 
+# Title is font-size 18; conservative average glyph width (px) for the default
+# sans stack, used to keep the header inside the card for long display names.
+_TITLE_CHAR_W = 9.8
+_TITLE_SUFFIX = "'s unsung open-source work"
+
+
+def _fit_title(display: str, inner_width: int) -> str:
+    """Build the auto title, truncating a long display name so it fits."""
+    budget = int(inner_width / _TITLE_CHAR_W)
+    full = display + _TITLE_SUFFIX
+    if len(full) <= budget:
+        return full
+    name_budget = budget - len(_TITLE_SUFFIX) - 1  # -1 for the ellipsis
+    if name_budget < 1:
+        name_budget = 1
+    return display[:name_budget].rstrip() + "\u2026" + _TITLE_SUFFIX
+
+
+def _fit_generic(text: str, inner_width: int) -> str:
+    """Hard-cut an arbitrary (e.g. custom) title so it fits the card."""
+    budget = int(inner_width / _TITLE_CHAR_W)
+    if len(text) <= budget:
+        return text
+    return text[: max(1, budget - 1)].rstrip() + "\u2026"
+
 
 def _fit_names(names: list[str], inner_width: int) -> str:
     """Join repo names to fit within ``inner_width`` px, ellipsizing if needed.
@@ -76,11 +101,12 @@ def render(stats: Stats, theme: str = "dark", title: str | None = None,
            hide_border: bool = False, animate: bool = True) -> str:
     c = THEMES.get(theme, THEMES["dark"])
     display = stats.name or stats.login
-    if title is None:
-        title = f"{display}'s unsung open-source work"
-
     width, height = 470, 200
     pad = 25
+    if title is None:
+        title = _fit_title(display, width - 2 * pad)
+    else:
+        title = _fit_generic(title, width - 2 * pad)
     header_y = 40
     row_start = 78
     row_gap = 27

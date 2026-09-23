@@ -128,3 +128,33 @@ def test_footer_names_fit_within_card():
     # a single over-long name is hard-cut with an ellipsis
     solo = _fit_names(["x" * 200], inner)
     assert len(solo) <= budget and solo.endswith("\u2026")
+
+
+def test_title_fits_within_card():
+    """A long display name must be truncated so the header stays in the card."""
+    from unsung.card import _fit_title, _fit_generic, _TITLE_CHAR_W, _TITLE_SUFFIX
+
+    inner = 470 - 2 * 25
+    budget = int(inner / _TITLE_CHAR_W)
+    # long display name -> ellipsized name, suffix preserved, fits budget
+    out = _fit_title("Alexander Christopher Montgomery-Wellington", inner)
+    assert len(out) <= budget
+    assert out.endswith(_TITLE_SUFFIX)
+    assert "\u2026" in out
+    # short name is left untouched
+    assert _fit_title("dan", inner) == "dan" + _TITLE_SUFFIX
+    # custom title is hard-cut generically
+    long_custom = "A very very very very very very very long custom title here"
+    cut = _fit_generic(long_custom, inner)
+    assert len(cut) <= budget and cut.endswith("\u2026")
+    assert _fit_generic("short", inner) == "short"
+
+
+def test_render_long_name_title_in_svg():
+    s = Stats(login="x", name="Alexander Christopher Montgomery-Wellington")
+    svg = render(s)
+    import re
+
+    t = re.search(r'font-size="18"[^>]*>([^<]*)<', svg).group(1)
+    assert t.endswith("'s unsung open-source work")
+    assert "\u2026" in t

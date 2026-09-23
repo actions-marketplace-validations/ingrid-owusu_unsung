@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2 — 2026-09-23
+- Fix: the card title now truncates long display names (e.g.
+  `Alexander Christopher Montgomery-Wellington`) with an ellipsis so the header
+  stays inside the card border, matching the footer's width-aware fitting.
+
 ## 0.1.1 — 2026-09-23
 - Fix: the "most helped" footer now ellipsizes long `owner/repo` names so it
   always stays inside the card border (previously long names could overflow for
