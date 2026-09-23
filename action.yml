@@ -1,0 +1,64 @@
+name: "Unsung — open-source citizen card"
+description: "Generate & commit an SVG card of your unsung open-source work: reviews given, and PRs/issues to repos you don't own."
+author: "Ingrid Owusu"
+branding:
+  icon: "heart"
+  color: "purple"
+inputs:
+  username:
+    description: "GitHub login to report on. Defaults to the repo owner."
+    required: false
+    default: ${{ github.repository_owner }}
+  token:
+    description: "GitHub token used for the GraphQL API."
+    required: false
+    default: ${{ github.token }}
+  output:
+    description: "Path (relative to the repo) to write the SVG to."
+    required: false
+    default: "unsung.svg"
+  theme:
+    description: "Color theme: dark, light, dracula, gruvbox."
+    required: false
+    default: "dark"
+  since:
+    description: "'year' (trailing 365 days) or 'all' (lifetime)."
+    required: false
+    default: "year"
+  title:
+    description: "Custom card title (optional)."
+    required: false
+    default: ""
+  commit_message:
+    description: "Commit message used when the card changes."
+    required: false
+    default: "chore: update unsung card"
+runs:
+  using: "composite"
+  steps:
+    - name: Generate unsung card
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        PYTHONPATH: ${{ github.action_path }}/src
+      run: |
+        title_arg=()
+        if [ -n "${{ inputs.title }}" ]; then title_arg=(--title "${{ inputs.title }}"); fi
+        python3 -m unsung \
+          "${{ inputs.username }}" \
+          --output "${{ inputs.output }}" \
+          --theme "${{ inputs.theme }}" \
+          --since "${{ inputs.since }}" \
+          "${title_arg[@]}"
+    - name: Commit if changed
+      shell: bash
+      run: |
+        if [ -n "$(git status --porcelain "${{ inputs.output }}")" ]; then
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "${{ inputs.output }}"
+          git commit -m "${{ inputs.commit_message }}"
+          git push
+        else
+          echo "unsung: card unchanged, nothing to commit."
+        fi
