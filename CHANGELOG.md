@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0 — 2026-09-24
+- New `unsung init` command: scaffolds `.github/workflows/unsung.yml` and prints
+  the README embed line to paste, so setup is one command instead of copying two
+  blocks by hand. Accepts `--theme`, `--since`, `--cron`, `--output`, and
+  `--force` (refuses to overwrite an existing workflow unless forced). Try it
+  with `pipx run unsung-card init`.
+
 ## 0.3.0 — 2026-09-24
 - Redesigned card: it now **leads with a positive headline** — your total
   contributions across the projects you don't own (e.g. *"139 contributions

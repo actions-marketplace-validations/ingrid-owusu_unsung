@@ -35,6 +35,23 @@ about the help you give *other* people.
 
 ## Quick start
 
+The fastest way is one command — it scaffolds the workflow and prints the line to
+paste into your profile README:
+
+```console
+$ pipx run unsung-card init          # or: pip install unsung-card && unsung init
+unsung: wrote .github/workflows/unsung.yml
+
+Next: add this line to your profile README.md:
+
+![My unsung open-source work](unsung.svg)
+```
+
+`unsung init` accepts `--theme`, `--since`, `--cron`, and `--output`; use `--force`
+to overwrite an existing workflow. Commit both files and you're done.
+
+<details><summary>Or set it up by hand</summary>
+
 Add a placeholder to your profile `README.md` (the repo named after your username):
 
 ```markdown
@@ -62,7 +79,9 @@ jobs:
           since: year        # year | all
 ```
 
-That's it. On each run the Action regenerates `unsung.svg` and commits it only if
+</details>
+
+On each run the Action regenerates `unsung.svg` and commits it only if
 the numbers changed. The default `GITHUB_TOKEN` is enough — no secrets to manage.
 
 ## Run it locally

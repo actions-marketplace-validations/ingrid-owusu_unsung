@@ -230,3 +230,36 @@ def test_render_long_name_title_in_svg():
     t = re.search(r'font-size="18"[^>]*>([^<]*)<', svg).group(1)
     assert t.endswith("'s unsung open-source work")
     assert "\u2026" in t
+
+
+def test_init_writes_workflow(tmp_path, monkeypatch, capsys):
+    from unsung.cli import init, WORKFLOW_PATH
+    monkeypatch.chdir(tmp_path)
+    rc = init([])
+    assert rc == 0
+    wf = tmp_path / WORKFLOW_PATH
+    assert wf.exists()
+    body = wf.read_text()
+    assert "ingrid-owusu/unsung@v1" in body
+    assert "contents: write" in body
+    assert "theme: dark" in body and "since: year" in body
+    out = capsys.readouterr()
+    assert "![My unsung open-source work](unsung.svg)" in out.out
+
+
+def test_init_refuses_overwrite_without_force(tmp_path, monkeypatch):
+    from unsung.cli import init, WORKFLOW_PATH
+    monkeypatch.chdir(tmp_path)
+    assert init([]) == 0
+    # second run without --force fails; with --force succeeds
+    assert init([]) == 1
+    assert init(["--force", "--theme", "dracula", "--since", "all"]) == 0
+    body = (tmp_path / WORKFLOW_PATH).read_text()
+    assert "theme: dracula" in body and "since: all" in body
+
+
+def test_main_routes_init(tmp_path, monkeypatch):
+    from unsung.cli import main, WORKFLOW_PATH
+    monkeypatch.chdir(tmp_path)
+    assert main(["init"]) == 0
+    assert (tmp_path / WORKFLOW_PATH).exists()
