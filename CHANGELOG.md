@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.1 — 2026-09-24
+- Fix `unsung init` output: the README embed line and its "add this line"
+  instruction were printed on different streams (stdout vs stderr), so in a
+  terminal they could interleave and the embed line appeared detached from its
+  instruction. The whole guidance block is now printed in order on one stream,
+  with the embed on its own clean copy-paste line.
+
 ## 0.4.0 — 2026-09-24
 - New `unsung init` command: scaffolds `.github/workflows/unsung.yml` and prints
   the README embed line to paste, so setup is one command instead of copying two

@@ -65,16 +65,18 @@ def init(argv: list[str] | None = None) -> int:
         fh.write(content)
     embed = f"![My unsung open-source work]({args.output})"
     print(f"unsung: wrote {path}", file=sys.stderr)
+    # Keep the whole instruction block on one stream (stdout) so the embed line
+    # never gets detached from its "add this line" instruction by stdout/stderr
+    # interleaving in a terminal. The embed stays on its own clean line so it is
+    # still easy to copy-paste (or pipe/grep).
     print(
         "\nNext: add this line to your profile README.md "
-        "(the repo named after your username):\n",
-        file=sys.stderr,
+        "(the repo named after your username):\n"
     )
     print(embed)
     print(
         "\nThen commit both files. The Action runs on the schedule (and on demand "
-        "via 'Run workflow') using the built-in GITHUB_TOKEN \u2014 no secrets to set.",
-        file=sys.stderr,
+        "via 'Run workflow') using the built-in GITHUB_TOKEN \u2014 no secrets to set."
     )
     return 0
 
