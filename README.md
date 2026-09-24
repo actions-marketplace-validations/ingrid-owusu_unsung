@@ -94,10 +94,13 @@ $ GITHUB_TOKEN=xxxxx python -m unsung your-login --theme dracula --output card.s
 
 ## What the numbers mean
 
+- **Headline** — your total contributions (reviews + PRs + issues) across the
+  distinct **projects you don't own** that you helped. This is the one number the
+  card leads with — the invisible half of open source that never shows up on your
+  green contribution graph.
 - **Reviews given** — PR reviews you submitted on repositories you don't own.
 - **PRs to others' projects** — pull requests you opened on repos you don't own.
 - **Issues opened for others** — issues you filed on repos you don't own.
-- **Projects helped** — distinct non-owned public repositories you contributed to.
 - **♥ most helped** — the most *prominent* projects you contributed to (ranked by
   their star count), shown with a compact star badge like `facebook/react ★220k`.
 

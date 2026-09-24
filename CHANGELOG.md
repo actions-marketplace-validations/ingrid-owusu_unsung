@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 — 2026-09-24
+- Redesigned card: it now **leads with a positive headline** — your total
+  contributions across the projects you don't own (e.g. *"139 contributions
+  across 21 projects you don't own — the invisible half of open source"*) — so
+  the card celebrates a single flattering number instead of reading like a
+  scorecard. A zero metric (e.g. no reviews yet) now renders **muted** rather
+  than as a bright `0`, so a modest contributor's card still looks good and is
+  worth embedding. The `projects helped` count moved into the headline.
+
 ## 0.2.0 — 2026-09-23
 - The "most helped" footer now ranks by repository **prominence** (stargazers)
   instead of raw contribution count, and shows a compact star badge, e.g.
