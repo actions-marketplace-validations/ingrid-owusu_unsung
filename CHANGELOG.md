@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.4.1 — 2026-09-24
+- Fix `unsung init` output: the README embed line and its "add this line"
+  instruction were printed on different streams (stdout vs stderr), so in a
+  terminal they could interleave and the embed line appeared detached from its
+  instruction. The whole guidance block is now printed in order on one stream,
+  with the embed on its own clean copy-paste line.
+
+## 0.4.0 — 2026-09-24
+- New `unsung init` command: scaffolds `.github/workflows/unsung.yml` and prints
+  the README embed line to paste, so setup is one command instead of copying two
+  blocks by hand. Accepts `--theme`, `--since`, `--cron`, `--output`, and
+  `--force` (refuses to overwrite an existing workflow unless forced). Try it
+  with `pipx run unsung-card init`.
+
+## 0.3.0 — 2026-09-24
+- Redesigned card: it now **leads with a positive headline** — your total
+  contributions across the projects you don't own (e.g. *"139 contributions
+  across 21 projects you don't own — the invisible half of open source"*) — so
+  the card celebrates a single flattering number instead of reading like a
+  scorecard. A zero metric (e.g. no reviews yet) now renders **muted** rather
+  than as a bright `0`, so a modest contributor's card still looks good and is
+  worth embedding. The `projects helped` count moved into the headline.
+
 ## 0.2.0 — 2026-09-23
 - The "most helped" footer now ranks by repository **prominence** (stargazers)
   instead of raw contribution count, and shows a compact star badge, e.g.

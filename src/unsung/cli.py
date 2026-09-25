@@ -9,6 +9,77 @@ from . import __version__
 from .api import ApiError, collect
 from .card import THEMES, render
 
+WORKFLOW_PATH = ".github/workflows/unsung.yml"
+
+_WORKFLOW_TEMPLATE = """\
+name: unsung
+on:
+  schedule:
+    - cron: "{cron}"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  card:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ingrid-owusu/unsung@v1
+        with:
+          theme: {theme}        # dark | light | dracula | gruvbox
+          since: {since}        # year | all
+"""
+
+
+def _build_init_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="unsung init",
+        description="Scaffold the GitHub Action workflow that keeps your unsung "
+        "card up to date, and print the README embed snippet to paste.",
+    )
+    p.add_argument("--theme", default="dark", choices=sorted(THEMES),
+                   help="card theme to write into the workflow (default: dark)")
+    p.add_argument("--since", default="year", choices=["year", "all"],
+                   help="'year' (trailing 365 days, default) or 'all' (lifetime)")
+    p.add_argument("--cron", default="0 3 * * *",
+                   help="schedule cron for the workflow (default: '0 3 * * *')")
+    p.add_argument("-o", "--output", default="unsung.svg",
+                   help="SVG path the card is written to (default: unsung.svg)")
+    p.add_argument("--force", action="store_true",
+                   help="overwrite an existing workflow file")
+    return p
+
+
+def init(argv: list[str] | None = None) -> int:
+    args = _build_init_parser().parse_args(argv)
+    path = WORKFLOW_PATH
+    if os.path.exists(path) and not args.force:
+        print(
+            f"unsung: {path} already exists (use --force to overwrite)",
+            file=sys.stderr,
+        )
+        return 1
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    content = _WORKFLOW_TEMPLATE.format(cron=args.cron, theme=args.theme, since=args.since)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(content)
+    embed = f"![My unsung open-source work]({args.output})"
+    print(f"unsung: wrote {path}", file=sys.stderr)
+    # Keep the whole instruction block on one stream (stdout) so the embed line
+    # never gets detached from its "add this line" instruction by stdout/stderr
+    # interleaving in a terminal. The embed stays on its own clean line so it is
+    # still easy to copy-paste (or pipe/grep).
+    print(
+        "\nNext: add this line to your profile README.md "
+        "(the repo named after your username):\n"
+    )
+    print(embed)
+    print(
+        "\nThen commit both files. The Action runs on the schedule (and on demand "
+        "via 'Run workflow') using the built-in GITHUB_TOKEN \u2014 no secrets to set."
+    )
+    return 0
+
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
@@ -30,6 +101,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
+    if argv and argv[0] == "init":
+        return init(argv[1:])
     args = build_parser().parse_args(argv)
     token = args.token or os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
     if not token:

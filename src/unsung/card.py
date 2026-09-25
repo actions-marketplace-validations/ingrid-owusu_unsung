@@ -27,11 +27,12 @@ THEMES = {
     },
 }
 
+# Detail rows below the hero. ``projects_helped`` is surfaced in the hero
+# headline instead, so the breakdown stays to the three "invisible" actions.
 _ROWS = [
     ("reviews_given", "Reviews given", "\U0001F50D"),
     ("prs_to_others", "PRs to others' projects", "\U0001F500"),
     ("issues_for_others", "Issues opened for others", "\U0001F41B"),
-    ("projects_helped", "Projects helped", "\U0001F30D"),
 ]
 
 
@@ -120,19 +121,24 @@ def _esc(s: str) -> str:
     )
 
 
+# Hero number is font-size 34; conservative average digit width (px).
+_HERO_DIGIT_W = 21.0
+
+
 def render(stats: Stats, theme: str = "dark", title: str | None = None,
            hide_border: bool = False, animate: bool = True) -> str:
     c = THEMES.get(theme, THEMES["dark"])
     display = stats.name or stats.login
-    width, height = 470, 200
+    width, height = 470, 232
     pad = 25
     if title is None:
         title = _fit_title(display, width - 2 * pad)
     else:
         title = _fit_generic(title, width - 2 * pad)
     header_y = 40
-    row_start = 78
-    row_gap = 27
+    hero_y = 108          # baseline of the big total number
+    row_start = 148
+    row_gap = 24
 
     def anim(delay: float) -> str:
         if not animate:
@@ -142,27 +148,51 @@ def render(stats: Stats, theme: str = "dark", title: str | None = None,
             f'dur="0.5s" begin="{delay:.2f}s" fill="freeze"/>'
         )
 
+    # Hero: lead with a positive aggregate so the card celebrates a single
+    # flattering number instead of reading like a scorecard with 0-rows. Any
+    # contributor who touched one else's repo has a non-trivial headline here.
+    total = stats.total_help
+    projects = stats.projects_helped
+    hero_num = f"{total:,}"
+    label_x = pad + len(hero_num) * _HERO_DIGIT_W + 14
+    proj_word = "project" if projects == 1 else "projects"
+    op_hero = "0" if animate else "1"
+    hero = (
+        f'<g opacity="{op_hero}">{anim(0.25)}'
+        f'<text x="{pad}" y="{hero_y}" fill="{c["num"]}" font-size="34" '
+        f'font-weight="800">{hero_num}</text>'
+        f'<text x="{label_x:.0f}" y="{hero_y - 9}" fill="{c["text"]}" '
+        f'font-size="13.5">contributions across {projects:,} {proj_word}</text>'
+        f'<text x="{label_x:.0f}" y="{hero_y + 9}" fill="{c["muted"]}" '
+        f'font-size="12.5">you don\u2019t own \u2014 the invisible half of open source</text>'
+        f"</g>"
+    )
+
     rows = []
     for i, (attr, label, icon) in enumerate(_ROWS):
         y = row_start + i * row_gap
         val = getattr(stats, attr)
         op = "0" if animate else "1"
+        # De-emphasize a zero row (mute label + number) so an empty metric
+        # reads as "n/a" rather than a bright failing grade.
+        num_fill = c["num"] if val else c["muted"]
+        txt_fill = c["text"] if val else c["muted"]
         rows.append(
-            f'<g transform="translate({pad}, {y})" opacity="{op}">{anim(0.3 + i * 0.15)}'
+            f'<g transform="translate({pad}, {y})" opacity="{op}">{anim(0.45 + i * 0.15)}'
             f'<text x="0" y="0" font-size="15">{icon}</text>'
-            f'<text x="28" y="0" fill="{c["text"]}" font-size="14">{_esc(label)}</text>'
-            f'<text x="{width - 2 * pad}" y="0" fill="{c["num"]}" font-size="15" '
+            f'<text x="28" y="0" fill="{txt_fill}" font-size="14">{_esc(label)}</text>'
+            f'<text x="{width - 2 * pad}" y="0" fill="{num_fill}" font-size="15" '
             f'font-weight="700" text-anchor="end">{val:,}</text>'
             f"</g>"
         )
 
-    # Footer: top projects helped.
+    # Footer: top projects helped, ranked by prominence.
     footer = ""
     if stats.top_helped:
         names = _esc(_fit_names(_footer_entries(stats.top_helped), width - 2 * pad))
         op = "0" if animate else "1"
         footer = (
-            f'<g transform="translate({pad}, {row_start + len(_ROWS) * row_gap + 4})" '
+            f'<g transform="translate({pad}, {row_start + len(_ROWS) * row_gap + 6})" '
             f'opacity="{op}">{anim(1.1)}'
             f'<text x="0" y="0" fill="{c["muted"]}" font-size="11">'
             f'\u2764 most helped: {names}</text></g>'
@@ -189,6 +219,7 @@ the work that doesn't show up on your contribution graph \u00b7 {_esc(stats.sinc
 </g>
 <g opacity="{op_s}">{anim(0.2)}<line x1="{pad}" y1="{header_y + 26}" \
 x2="{width - pad}" y2="{header_y + 26}" stroke="{c["border"]}" stroke-width="1"/></g>
+{hero}
 {''.join(rows)}
 {footer}
 </svg>"""

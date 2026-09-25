@@ -105,6 +105,33 @@ def test_collect_case_insensitive_owner(monkeypatch):
     assert s.prs_to_others == 0  # OCTO/mine is own repo despite case
 
 
+def test_hero_leads_with_positive_total():
+    """The card headlines a single positive aggregate (total help + projects),
+    so it flatters a median contributor instead of reading as a scorecard."""
+    s = Stats(login="o", name="O", reviews_given=3, prs_to_others=4,
+              issues_for_others=3, projects_helped=5)
+    svg = render(s, animate=False)
+    assert ">10<" in svg  # total_help hero number (3+4+3)
+    assert "contributions across 5 projects" in svg
+    # singular grammar for a single project
+    s1 = Stats(login="o", name="O", reviews_given=0, prs_to_others=1,
+               issues_for_others=0, projects_helped=1)
+    assert "contributions across 1 project" in render(s1, animate=False)
+    assert "1 projects" not in render(s1, animate=False)
+
+
+def test_zero_rows_are_muted():
+    """A zero metric renders in the muted colour (reads 'n/a'), not the bright
+    accent colour of a real number."""
+    muted = THEMES["dark"]["muted"]
+    num = THEMES["dark"]["num"]
+    s = Stats(login="o", name="O", reviews_given=0, prs_to_others=5,
+              issues_for_others=0, projects_helped=3)
+    svg = render(s, theme="dark", animate=False)
+    assert f'fill="{num}" font-size="15" font-weight="700" text-anchor="end">5<' in svg
+    assert f'fill="{muted}" font-size="15" font-weight="700" text-anchor="end">0<' in svg
+
+
 def test_render_all_themes_valid_svg():
     s = Stats(login="octo", name="Octo", reviews_given=201, prs_to_others=126,
               issues_for_others=14, projects_helped=18,
@@ -203,3 +230,36 @@ def test_render_long_name_title_in_svg():
     t = re.search(r'font-size="18"[^>]*>([^<]*)<', svg).group(1)
     assert t.endswith("'s unsung open-source work")
     assert "\u2026" in t
+
+
+def test_init_writes_workflow(tmp_path, monkeypatch, capsys):
+    from unsung.cli import init, WORKFLOW_PATH
+    monkeypatch.chdir(tmp_path)
+    rc = init([])
+    assert rc == 0
+    wf = tmp_path / WORKFLOW_PATH
+    assert wf.exists()
+    body = wf.read_text()
+    assert "ingrid-owusu/unsung@v1" in body
+    assert "contents: write" in body
+    assert "theme: dark" in body and "since: year" in body
+    out = capsys.readouterr()
+    assert "![My unsung open-source work](unsung.svg)" in out.out
+
+
+def test_init_refuses_overwrite_without_force(tmp_path, monkeypatch):
+    from unsung.cli import init, WORKFLOW_PATH
+    monkeypatch.chdir(tmp_path)
+    assert init([]) == 0
+    # second run without --force fails; with --force succeeds
+    assert init([]) == 1
+    assert init(["--force", "--theme", "dracula", "--since", "all"]) == 0
+    body = (tmp_path / WORKFLOW_PATH).read_text()
+    assert "theme: dracula" in body and "since: all" in body
+
+
+def test_main_routes_init(tmp_path, monkeypatch):
+    from unsung.cli import main, WORKFLOW_PATH
+    monkeypatch.chdir(tmp_path)
+    assert main(["init"]) == 0
+    assert (tmp_path / WORKFLOW_PATH).exists()
